@@ -3,3 +3,8 @@
 name = "readline"
 version = "0.0.1"
 authors = ["Sean Perry", "Mika Attila"]
+
+[[bin]]
+name = "readline"
+test = false
+doc = false
