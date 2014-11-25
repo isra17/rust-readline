@@ -1,7 +1,6 @@
 #![crate_type = "lib"]
 extern crate libc;
 
-use libc::{c_char, c_int};
 use std::c_str;
 use std::char::is_whitespace;
 //use std::io::fs::File;
@@ -9,9 +8,9 @@ use std::io::{IoError, IoResult};
 use std::ptr;
 
 pub type CPPFunction =
-    Option<extern "C" fn(text: *const c_char, start: c_int, end: c_int) -> *mut *mut c_char>;
+    Option<extern "C" fn(text: *const i8, start: i32, end: i32) -> *mut *const i8>;
 // rl_compentry_func_t
-pub type CompletionEntryFunction = extern "C" fn(text: *const c_char, state: c_int) -> *mut c_char;
+pub type CompletionEntryFunction = extern "C" fn(text: *const i8, state: i32) -> *const i8;
 
 mod ffi {
     use libc::{c_char, c_int};
@@ -33,11 +32,14 @@ mod ffi {
         pub static mut rl_attempted_completion_function: super::CPPFunction;
         pub static mut rl_attempted_completion_over: c_int;
         pub static mut rl_completer_word_break_characters: *const c_char;
+        //pub static mut rl_completion_append_character: c_int;
+        //pub static mut rl_special_prefixes: *const c_char;
 
         pub fn using_history();
         pub fn add_history(line: *const c_char);
         pub fn history_get(offset: c_int) -> *mut HistEntry;
         pub fn clear_history();
+        //pub fn where_history() -> c_int;
 
         pub fn read_history(filename: *const c_char) -> c_int;
         pub fn write_history(filename: *const c_char) -> c_int;
@@ -53,7 +55,7 @@ mod ffi {
         pub fn rl_read_init_file(filename: *const c_char) -> c_int;
         pub fn rl_parse_and_bind(line: *const c_char) -> c_int;
 
-        pub fn rl_completion_matches(text: *const c_char, entry_func: super::CompletionEntryFunction) -> *mut *mut c_char;
+        pub fn rl_completion_matches(text: *const c_char, entry_func: super::CompletionEntryFunction) -> *mut *const c_char;
     }
     extern {
         pub fn strdup(s: *const c_char) -> *const c_char;
@@ -67,7 +69,7 @@ pub fn using_history() {
     unsafe { ffi::using_history() }
 }
 
-//static mut PREV_HIST: String = String::new();
+//static mut PREV_HIST: *const i8 = 0 as *const i8;
 
 /// Place `line` at the end of the history list.
 ///
@@ -81,9 +83,16 @@ pub fn add_history(line: &str) {
     if history_get(-1).map_or(false, |prev| prev.as_slice() == line) {
         return;
     }
-    unsafe {
-        ffi::add_history(line.to_c_str().as_ptr());
-    }
+    line.with_c_str(|line| {
+        unsafe {
+            // HISTCONTROL=ignoredups
+            //if PREV_HIST.is_null() || libc::strcmp(PREV_HIST, line) != 0 {
+                ffi::add_history(line);
+            //}
+            //libc::free(PREV_HIST as *mut c_void);
+            //PREV_HIST = ffi::strdup(line);
+        }
+    })
 }
 
 /// Return the history entry at position `index`, starting from 0.
@@ -187,7 +196,10 @@ pub fn append_history(nelements: i32, filename: Option<&Path>) -> IoResult<()> {
 ///
 /// (See [clear_history](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX10))
 pub fn clear_history() {
-    unsafe { ffi::clear_history() }
+    unsafe {
+        ffi::clear_history();
+        //PREV_HIST = ptr::null();
+    }
 }
 
 /// Cut off the history list, remembering only the last `max` entries.
@@ -253,7 +265,7 @@ pub fn readline(prompt: Option<&str>) -> Option<String> {
 /// Return the line gathered so far.
 ///
 /// (See [rl_line_buffer](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX192))
-pub fn rl_line_buffer() -> *mut c_char { // TODO return type ?
+pub fn rl_line_buffer() -> *mut i8 {
     unsafe { ffi::rl_line_buffer }
 }
 
@@ -380,7 +392,7 @@ pub fn set_rl_attempted_completion_function(f: CPPFunction) {
     unsafe { ffi::rl_attempted_completion_function = f }
 }
 
-pub fn rl_completion_matches(text: *const c_char, entry_func: CompletionEntryFunction) -> *mut *mut c_char {
+pub fn rl_completion_matches(text: *const i8, entry_func: CompletionEntryFunction) -> *mut *const i8 {
     unsafe {
         ffi::rl_completion_matches(text, entry_func)
     }
@@ -437,6 +449,7 @@ mod history_tests {
             super::rl_initialize().unwrap();
             super::using_history();
         });
+        super::clear_history();
         super::add_history("entry1");
         super::add_history("entry2");
         assert!(!super::history_is_stifled(), "history is not expected to be stifled by default")
@@ -460,6 +473,7 @@ mod history_tests {
             super::rl_initialize().unwrap();
             super::using_history();
         });
+        super::clear_history();
         let td = TempDir::new_in(&Path::new("."), "histo").unwrap();
         let history = td.path().join(".history");
 
@@ -483,6 +497,7 @@ mod history_tests {
             super::rl_initialize().unwrap();
             super::using_history();
         });
+        super::clear_history();
         assert_eq!(super::history_base(), 1);
     }
 }
@@ -496,7 +511,6 @@ mod rl_tests {
     fn rl_parse_and_bind() {
         START.doit(|| {
             super::rl_initialize().unwrap();
-            super::using_history();
         });
         super::rl_parse_and_bind("bind \\t rl_complete").unwrap();
     }

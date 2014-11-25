@@ -1,15 +1,32 @@
 extern crate "readline" as rl;
-extern crate libc;
 
 use std::io::stdio::println;
 use std::ptr;
-use libc::{c_char, c_int};
 
-extern fn rl_compentry_func(text: *const c_char, state: c_int) -> *mut c_char {
-	ptr::null_mut() // TODO
+//static mut entries: Option<Vec<String>> = None;
+
+extern fn rl_compentry_func(text: *const i8, i: i32) -> *const i8 {
+	if i == 0 {
+		// entries = ...
+	}
+	/*
+	match entries {
+		Some(entries) => {
+			if i >= entries.len() {
+				ptr::null()
+			} else {
+		    entries[i].with_c_str(|entry| {
+		        unsafe { ffi::strdup(entry) }
+		    });
+			}
+		}
+		_ => ptr::null()
+	}
+	*/
+	ptr::null() // TODO
 }
 
-extern fn my_attempted_completion_function(text: *const c_char, start: c_int, end: c_int) -> *mut *mut c_char {
+extern fn my_attempted_completion_function(text: *const i8, _start: i32, _end: i32) -> *mut *const i8 {
 	return rl::rl_completion_matches(text, rl_compentry_func)
 }
 
