@@ -76,7 +76,7 @@ pub fn using_history() {
 /// Blank lines and consecutive duplicates are discarded.
 /// (See [add_history](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX5))
 pub fn add_history(line: &str) {
-    if line.len() == 0 || is_whitespace(line.char_at(0)) { // HISTCONTROL=ignorespace
+    if line.len() == 0 || UnicodeChar::is_whitespace(line.char_at(0)) { // HISTCONTROL=ignorespace
         return;
     }
     // HISTCONTROL=ignoredups
@@ -244,24 +244,15 @@ pub fn history_length() -> i32 {
 /// If readline encounters an EOF while reading the line, and the line is empty at that point, then `None` is returned.
 /// Otherwise, the line is ended just as if a newline had been typed.
 /// (See [readline](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX190))
-pub fn readline(prompt: Option<&str>) -> Option<String> {
-    let (_cprmt, c_ptr) = match prompt {
-        Some(n) => {
-          let cprmt = n.to_c_str();
-          let c_ptr = cprmt.as_ptr();
-          (Some(cprmt), c_ptr)
-        }
-        None => (None, ptr::null())
-    };
-    unsafe {
-        let line = ffi::readline(c_ptr);
-        if line.is_null() {  // user pressed Ctrl-D
-            None
-        } else {
-            c_str::CString::new(line, true).as_str().map(|line| line.to_string())
-        }
+pub fn readline(prompt: &str) -> Option<String> {
+    let line = prompt.with_c_str(|prompt| unsafe { ffi::readline(prompt) });
+    if line.is_null() {  // user pressed Ctrl-D
+        None
+    } else {
+        unsafe { c_str::CString::new(line, true).as_str().map(|line| line.to_string()) }
     }
 }
+
 /// Return the line gathered so far.
 ///
 /// (See [rl_line_buffer](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX192))
@@ -452,17 +443,17 @@ mod history_tests {
         super::clear_history();
         super::add_history("entry1");
         super::add_history("entry2");
-        assert!(!super::history_is_stifled(), "history is not expected to be stifled by default")
+        assert!(!super::history_is_stifled(), "history is not expected to be stifled by default");
 
         super::stifle_history(1);
-        assert!(super::history_is_stifled(), "history has not been stifled")
+        assert!(super::history_is_stifled(), "history has not been stifled");
 
         super::add_history("entry2");
         super::add_history("entry3");
         assert_eq!(super::history_length(), 1);
 
-        assert_eq!(1, super::unstifle_history())
-        assert!(!super::history_is_stifled(), "history has not been unstifled")
+        assert_eq!(1, super::unstifle_history());
+        assert!(!super::history_is_stifled(), "history has not been unstifled");
 
         super::clear_history();
     }
@@ -485,7 +476,7 @@ mod history_tests {
 
         super::read_history(Some(&history)).unwrap();
         assert_eq!(super::history_length(), 2);
-        assert_eq!(super::history_get(-1), Some("entry2".to_string()))
+        assert_eq!(super::history_get(-1), Some("entry2".to_string()));
         super::clear_history();
 
         td.close().unwrap();
