@@ -4,7 +4,10 @@ name = "readline"
 version = "0.0.1"
 authors = ["Sean Perry", "Mika Attila"]
 
-[[bin]]
+[lib]
 name = "readline"
+
+[[bin]]
+name = "rl-sample"
 test = false
 doc = false

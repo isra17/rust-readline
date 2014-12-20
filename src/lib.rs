@@ -5,12 +5,60 @@ use std::c_str;
 use std::char::is_whitespace;
 //use std::io::fs::File;
 use std::io::{IoError, IoResult};
+use std::mem;
 use std::ptr;
+use libc::c_void;
 
 pub type CPPFunction =
     Option<extern "C" fn(text: *const i8, start: i32, end: i32) -> *mut *const i8>;
 // rl_compentry_func_t
 pub type CompletionEntryFunction = extern "C" fn(text: *const i8, state: i32) -> *const i8;
+
+static mut ENTRIES: *mut *const i8 = 0 as *mut *const i8;
+static mut NB_ENTRIES: uint = 0;
+static mut MAX_ENTRIES: uint = 0;
+
+fn clear_compentries() {
+    unsafe {
+        /* freed by readline
+        for i in range(0, NB_ENTRIES) {
+            libc::free(*ENTRIES.offset(i as int) as *mut c_void);
+        }*/
+        NB_ENTRIES = 0;
+    }
+}
+fn alloc_compentries(n: uint) -> *mut *const i8 {
+    unsafe {
+        if n > MAX_ENTRIES {
+            ENTRIES = libc::realloc(ENTRIES as *mut c_void, (n * mem::size_of::<*const i8>()) as u64) as *mut *const i8;
+            if ENTRIES.is_null() {
+                panic!("Memory allocation failed.");
+            }
+            MAX_ENTRIES = n;
+        }
+        NB_ENTRIES = n;
+        ENTRIES
+    }
+}
+pub fn set_compentries(entries: Vec<String>) {
+    clear_compentries();
+    let centries = alloc_compentries(entries.len());
+    for i in range(0, entries.len()) {
+        entries[i].with_c_str(|entry| {
+            unsafe { *centries.offset(i as int) = ffi::strdup(entry); }
+        });
+    }
+}
+pub fn get_compentry(i: uint) -> *const i8 {
+    unsafe {
+        if i >= NB_ENTRIES {
+            clear_compentries();
+            ptr::null()
+        } else {
+            *ENTRIES.offset(i as int)
+        }
+    }
+}
 
 mod ffi {
     use libc::{c_char, c_int};
