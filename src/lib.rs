@@ -2,6 +2,7 @@
 extern crate libc;
 
 use std::c_str;
+use std::c_str::ToCStr;
 use std::char::is_whitespace;
 //use std::io::fs::File;
 use std::io::{IoError, IoResult};
@@ -9,8 +10,8 @@ use std::mem;
 use std::ptr;
 use libc::c_void;
 
-pub type CPPFunction =
-    Option<extern "C" fn(text: *const i8, start: i32, end: i32) -> *mut *const i8>;
+pub type CompletionFunction = extern "C" fn(text: *const i8, start: i32, end: i32) -> *mut *const i8;
+pub type CPPFunction = Option<CompletionFunction>;
 // rl_compentry_func_t
 pub type CompletionEntryFunction = extern "C" fn(text: *const i8, state: i32) -> *const i8;
 

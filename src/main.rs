@@ -29,7 +29,7 @@ pub fn main() {
     //println!("{}", rl::rl_readline_version())
     println!("{}", rl::rl_library_version().unwrap());
 
-    rl::set_rl_attempted_completion_function(Some(my_attempted_completion_function));
+    rl::set_rl_attempted_completion_function(Some(my_attempted_completion_function as rl::CompletionFunction));
 
     loop {
         match rl::readline("> ") {
