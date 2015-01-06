@@ -3,7 +3,6 @@ extern crate libc;
 
 use std::c_str;
 use std::c_str::ToCStr;
-use std::char::is_whitespace;
 //use std::io::fs::File;
 use std::io::{IoError, IoResult};
 use std::mem;
@@ -125,7 +124,7 @@ pub fn using_history() {
 /// Blank lines and consecutive duplicates are discarded.
 /// (See [add_history](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX5))
 pub fn add_history(line: &str) {
-    if line.len() == 0 || UnicodeChar::is_whitespace(line.char_at(0)) { // HISTCONTROL=ignorespace
+    if line.len() == 0 || line.char_at(0).is_whitespace() { // HISTCONTROL=ignorespace
         return;
     }
     // HISTCONTROL=ignoredups
