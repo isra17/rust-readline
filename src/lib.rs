@@ -43,11 +43,10 @@ fn alloc_compentries(n: usize) -> *mut *const i8 {
 }
 pub fn set_compentries(entries: Vec<String>) {
     clear_compentries();
-    let centries = alloc_compentries(entries.len());
+    let c_entries = alloc_compentries(entries.len());
     for i in range(0, entries.len()) {
-        entries[i].with_c_str(|entry| {
-            unsafe { *centries.offset(i as isize) = ffi::strdup(entry); }
-        });
+        let c_entry = CString::from_slice(entries[i].as_bytes());
+        unsafe { *c_entries.offset(i as isize) = ffi::strdup(c_entry.as_ptr()); }
     }
 }
 pub fn get_compentry(i: usize) -> *const i8 {
@@ -132,16 +131,15 @@ pub fn add_history(line: &str) {
     if history_get(-1).map_or(false, |prev| prev.as_slice() == line) {
         return;
     }
-    line.with_c_str(|line| {
-        unsafe {
-            // HISTCONTROL=ignoredups
-            //if PREV_HIST.is_null() || libc::strcmp(PREV_HIST, line) != 0 {
-                ffi::add_history(line);
-            //}
-            //libc::free(PREV_HIST as *mut c_void);
-            //PREV_HIST = ffi::strdup(line);
-        }
-    })
+    let c_line = CString::from_slice(line.as_bytes());
+    unsafe {
+        // HISTCONTROL=ignoredups
+        //if PREV_HIST.is_null() || libc::strcmp(PREV_HIST, line) != 0 {
+            ffi::add_history(c_line.as_ptr());
+        //}
+        //libc::free(PREV_HIST as *mut c_void);
+        //PREV_HIST = ffi::strdup(line);
+    }
 }
 
 /// Return the history entry at position `index`, starting from 0.
@@ -153,12 +151,12 @@ pub fn history_get(mut index: i32) -> Option<String> {
         index += history_length();
     }
     index += history_base(); // TODO validate
-    let entry = unsafe { ffi::history_get(index) };
-    if entry.is_null() {
+    let c_entry = unsafe { ffi::history_get(index) };
+    if c_entry.is_null() {
         None
     } else {
-        let line = unsafe { c_str_to_bytes(&(*entry).line); };
-        str::from_utf8(line).unwrap()
+        let slice = unsafe { c_str_to_bytes(&(*c_entry).line) };
+        Some(str::from_utf8(slice).unwrap().to_string())
     }
 }
 
@@ -168,9 +166,10 @@ pub fn history_get(mut index: i32) -> Option<String> {
 /// (See [read_history](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX27))
 pub fn read_history(filename: Option<&Path>) -> IoResult<()> {
     let errno = match filename {
-        Some(filename) => filename.with_c_str(|filename| {
-            unsafe { ffi::read_history(filename) }
-        }),
+        Some(filename) => {
+            let c_filename = CString::from_slice(filename.as_vec());
+            unsafe { ffi::read_history(c_filename.as_ptr()) }
+        },
         None => unsafe { ffi::read_history(ptr::null()) }
     };
     match errno {
@@ -188,9 +187,10 @@ pub fn write_history(filename: Option<&Path>) -> IoResult<()> {
         return Ok(());
     }
     let errno = match filename {
-        Some(filename) => filename.with_c_str(|filename| {
-            unsafe { ffi::write_history(filename) }
-        }),
+        Some(filename) => {
+            let c_filename = CString::from_slice(filename.as_vec());
+            unsafe { ffi::write_history(c_filename.as_ptr()) }
+        },
         None => unsafe { ffi::write_history(ptr::null()) }
     };
     match errno {
@@ -205,9 +205,10 @@ pub fn write_history(filename: Option<&Path>) -> IoResult<()> {
 /// (See [history_truncate_file](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX31))
 pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> IoResult<()> {
     let errno = match filename {
-        Some(filename) => filename.with_c_str(|filename| {
-                unsafe { ffi::history_truncate_file(filename, nlines) }
-        }),
+        Some(filename) => {
+            let c_filename = CString::from_slice(filename.as_vec());
+            unsafe { ffi::history_truncate_file(c_filename.as_ptr(), nlines) }
+        },
         None => unsafe { ffi::history_truncate_file(ptr::null(), nlines) }
     };
     match errno {
@@ -229,9 +230,8 @@ pub fn append_history(nelements: i32, filename: Option<&Path>) -> IoResult<()> {
             /*if !filename.exists() {
                 File::create(filename);
             }*/
-            filename.with_c_str(|filename| {
-                unsafe { ffi::append_history(nelements, filename) }
-            })
+            let c_filename = CString::from_slice(filename.as_vec());
+            unsafe { ffi::append_history(nelements, c_filename.as_ptr()) }
         },
         None => unsafe { ffi::append_history(nelements, ptr::null()) }
     };
@@ -294,11 +294,15 @@ pub fn history_length() -> i32 {
 /// Otherwise, the line is ended just as if a newline had been typed.
 /// (See [readline](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX190))
 pub fn readline(prompt: &str) -> Option<String> {
-    let line = prompt.with_c_str(|prompt| unsafe { ffi::readline(prompt) });
-    if line.is_null() {  // user pressed Ctrl-D
+    let c_prompt = CString::from_slice(prompt.as_bytes());
+    let c_line = unsafe { ffi::readline(c_prompt.as_ptr()) };
+    if c_line.is_null() {  // user pressed Ctrl-D
         None
     } else {
-        unsafe { CString::new(line, true).as_str().map(|line| line.to_string()) }
+        let slice = unsafe { c_str_to_bytes(&c_line) };
+        let line = str::from_utf8(slice).unwrap().to_string();
+        unsafe { libc::free(c_line as *mut c_void); };
+        Some(line)
     }
 }
 
@@ -330,9 +334,9 @@ pub fn rl_initialize() -> IoResult<()> {
 /// Return the version number of this revision of the library.
 ///
 /// (See [rl_library_version](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX214))
-pub fn rl_library_version() -> Option<String> {
-    let version = unsafe { c_str_to_bytes(&ffi::rl_library_version); };
-    str::from_utf8(version).unwrap()
+pub fn rl_library_version() -> String {
+    let slice = unsafe { c_str_to_bytes(&ffi::rl_library_version) };
+    str::from_utf8(slice).unwrap().to_string()
 }
 
 /// Returns an integer encoding the current version of the library.
@@ -351,8 +355,8 @@ pub fn rl_readline_name() -> Option<String> {
         if name.is_null() {
             None
         } else {
-            let slice = unsafe { c_str_to_bytes(&name); };
-            str::from_utf8(slice).unwrap()
+            let slice = unsafe { c_str_to_bytes(&name) };
+            Some(str::from_utf8(slice).unwrap().to_string())
         }
     }
 }
@@ -365,18 +369,16 @@ pub fn set_rl_readline_name(name: &str) {
     /*unsafe {
         libc::free(ffi::rl_readline_name as *mut c_void);
     }*/
-    name.with_c_str(|name| {
-        unsafe { ffi::rl_readline_name = ffi::strdup(name) }
-    });
+    let c_name = CString::from_slice(name.as_bytes());
+    unsafe { ffi::rl_readline_name = ffi::strdup(c_name.as_ptr()) }
 }
 
 /// Read keybindings and variable assignments from `filename`.
 ///
 /// (See [rl_read_init_file](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX267))
 pub fn rl_read_init_file(filename: &Path) -> IoResult<()> {
-    let errno = filename.with_c_str(|filename| {
-        unsafe { ffi::rl_read_init_file(filename) }
-    });
+    let c_filename = CString::from_slice(filename.as_vec());
+    let errno = unsafe { ffi::rl_read_init_file(c_filename.as_ptr()) };
     match errno {
         0 => Ok(()),
         errno => Err(IoError::from_errno(errno as usize, true))
@@ -387,9 +389,8 @@ pub fn rl_read_init_file(filename: &Path) -> IoResult<()> {
 ///
 /// (See [rl_parse_and_bind](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX266))
 pub fn rl_parse_and_bind(line: &str) -> IoResult<()> {
-    let errno = line.with_c_str(|line| {
-        unsafe { ffi::rl_parse_and_bind(line) }
-    });
+    let c_line = CString::from_slice(line.as_bytes());
+    let errno = unsafe { ffi::rl_parse_and_bind(c_line.as_ptr()) };
     match errno {
         0 => Ok(()),
         errno => Err(IoError::from_errno(errno as usize, true))
@@ -410,8 +411,8 @@ pub fn rl_completer_word_break_characters() -> Option<String> {
         if wbc.is_null() {
             None
         } else {
-            let slice = unsafe { c_str_to_bytes(&wbc); };
-            str::from_utf8(slice).unwrap()
+            let slice = unsafe { c_str_to_bytes(&wbc) };
+            Some(str::from_utf8(slice).unwrap().to_string())
         }
     }
 }
@@ -425,9 +426,8 @@ pub fn set_rl_completer_word_break_characters(wbc: &str) {
     /*unsafe {
         libc::free(ffi::rl_completer_word_break_characters as *mut c_void);
     }*/
-    wbc.with_c_str(|wbc| {
-        unsafe { ffi::rl_completer_word_break_characters = ffi::strdup(wbc) }
-    });
+    let c_wbc = CString::from_slice(wbc.as_bytes());
+    unsafe { ffi::rl_completer_word_break_characters = ffi::strdup(c_wbc.as_ptr()) };
 }
 
 
@@ -449,7 +449,7 @@ mod history_tests {
 
     #[test]
     fn clear() {
-        START.doit(|| {
+        START.call_once(|| {
             super::rl_initialize().unwrap();
             super::using_history();
         });
@@ -461,7 +461,7 @@ mod history_tests {
 
     #[test]
     fn add_history() {
-        START.doit(|| {
+        START.call_once(|| {
             super::rl_initialize().unwrap();
             super::using_history();
         });
@@ -488,7 +488,7 @@ mod history_tests {
 
     #[test]
     fn stifle_history() {
-        START.doit(|| {
+        START.call_once(|| {
             super::rl_initialize().unwrap();
             super::using_history();
         });
@@ -512,7 +512,7 @@ mod history_tests {
 
     #[test]
     fn read_history() {
-        START.doit(|| {
+        START.call_once(|| {
             super::rl_initialize().unwrap();
             super::using_history();
         });
@@ -536,7 +536,7 @@ mod history_tests {
 
     #[test]
     fn history_base() {
-        START.doit(|| {
+        START.call_once(|| {
             super::rl_initialize().unwrap();
             super::using_history();
         });
@@ -552,7 +552,7 @@ mod rl_tests {
 
     #[test]
     fn rl_parse_and_bind() {
-        START.doit(|| {
+        START.call_once(|| {
             super::rl_initialize().unwrap();
         });
         super::rl_parse_and_bind("bind \\t rl_complete").unwrap();
