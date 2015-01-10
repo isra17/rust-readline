@@ -1,12 +1,13 @@
 #![crate_type = "lib"]
 extern crate libc;
 
-use std::c_str;
-use std::c_str::ToCStr;
+use std::ffi::CString;
+use std::ffi::c_str_to_bytes;
 //use std::io::fs::File;
 use std::io::{IoError, IoResult};
 use std::mem;
 use std::ptr;
+use std::str;
 use libc::c_void;
 
 pub type CompletionFunction = extern "C" fn(text: *const i8, start: i32, end: i32) -> *mut *const i8;
@@ -15,19 +16,19 @@ pub type CPPFunction = Option<CompletionFunction>;
 pub type CompletionEntryFunction = extern "C" fn(text: *const i8, state: i32) -> *const i8;
 
 static mut ENTRIES: *mut *const i8 = 0 as *mut *const i8;
-static mut NB_ENTRIES: uint = 0;
-static mut MAX_ENTRIES: uint = 0;
+static mut NB_ENTRIES: usize = 0;
+static mut MAX_ENTRIES: usize = 0;
 
 fn clear_compentries() {
     unsafe {
         /* freed by readline
         for i in range(0, NB_ENTRIES) {
-            libc::free(*ENTRIES.offset(i as int) as *mut c_void);
+            libc::free(*ENTRIES.offset(i as isize) as *mut c_void);
         }*/
         NB_ENTRIES = 0;
     }
 }
-fn alloc_compentries(n: uint) -> *mut *const i8 {
+fn alloc_compentries(n: usize) -> *mut *const i8 {
     unsafe {
         if n > MAX_ENTRIES {
             ENTRIES = libc::realloc(ENTRIES as *mut c_void, (n * mem::size_of::<*const i8>()) as u64) as *mut *const i8;
@@ -45,17 +46,17 @@ pub fn set_compentries(entries: Vec<String>) {
     let centries = alloc_compentries(entries.len());
     for i in range(0, entries.len()) {
         entries[i].with_c_str(|entry| {
-            unsafe { *centries.offset(i as int) = ffi::strdup(entry); }
+            unsafe { *centries.offset(i as isize) = ffi::strdup(entry); }
         });
     }
 }
-pub fn get_compentry(i: uint) -> *const i8 {
+pub fn get_compentry(i: usize) -> *const i8 {
     unsafe {
         if i >= NB_ENTRIES {
             clear_compentries();
             ptr::null()
         } else {
-            *ENTRIES.offset(i as int)
+            *ENTRIES.offset(i as isize)
         }
     }
 }
@@ -156,8 +157,8 @@ pub fn history_get(mut index: i32) -> Option<String> {
     if entry.is_null() {
         None
     } else {
-        let line = unsafe { c_str::CString::new((*entry).line, false) };
-        line.as_str().map(|ret| ret.to_string())
+        let line = unsafe { c_str_to_bytes(&(*entry).line); };
+        str::from_utf8(line).unwrap()
     }
 }
 
@@ -174,7 +175,7 @@ pub fn read_history(filename: Option<&Path>) -> IoResult<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as uint, true))
+        errno => Err(IoError::from_errno(errno as usize, true))
     }
 }
 
@@ -194,7 +195,7 @@ pub fn write_history(filename: Option<&Path>) -> IoResult<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as uint, true))
+        errno => Err(IoError::from_errno(errno as usize, true))
     }
 }
 
@@ -211,7 +212,7 @@ pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> IoResult<(
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as uint, true))
+        errno => Err(IoError::from_errno(errno as usize, true))
     }
 }
 
@@ -236,7 +237,7 @@ pub fn append_history(nelements: i32, filename: Option<&Path>) -> IoResult<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as uint, true))
+        errno => Err(IoError::from_errno(errno as usize, true))
     }
 }
 
@@ -297,7 +298,7 @@ pub fn readline(prompt: &str) -> Option<String> {
     if line.is_null() {  // user pressed Ctrl-D
         None
     } else {
-        unsafe { c_str::CString::new(line, true).as_str().map(|line| line.to_string()) }
+        unsafe { CString::new(line, true).as_str().map(|line| line.to_string()) }
     }
 }
 
@@ -322,7 +323,7 @@ pub fn rl_initialize() -> IoResult<()> {
     let errno = unsafe { ffi::rl_initialize() };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as uint, true))
+        errno => Err(IoError::from_errno(errno as usize, true))
     }
 }
 
@@ -330,7 +331,8 @@ pub fn rl_initialize() -> IoResult<()> {
 ///
 /// (See [rl_library_version](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX214))
 pub fn rl_library_version() -> Option<String> {
-    unsafe { c_str::CString::new(ffi::rl_library_version, false).as_str().map(|version| version.to_string()) }
+    let version = unsafe { c_str_to_bytes(&ffi::rl_library_version); };
+    str::from_utf8(version).unwrap()
 }
 
 /// Returns an integer encoding the current version of the library.
@@ -349,7 +351,8 @@ pub fn rl_readline_name() -> Option<String> {
         if name.is_null() {
             None
         } else {
-            c_str::CString::new(name, false).as_str().map(|name| name.to_string())
+            let slice = unsafe { c_str_to_bytes(&name); };
+            str::from_utf8(slice).unwrap()
         }
     }
 }
@@ -376,7 +379,7 @@ pub fn rl_read_init_file(filename: &Path) -> IoResult<()> {
     });
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as uint, true))
+        errno => Err(IoError::from_errno(errno as usize, true))
     }
 }
 
@@ -389,7 +392,7 @@ pub fn rl_parse_and_bind(line: &str) -> IoResult<()> {
     });
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as uint, true))
+        errno => Err(IoError::from_errno(errno as usize, true))
     }
 }
 
@@ -407,7 +410,8 @@ pub fn rl_completer_word_break_characters() -> Option<String> {
         if wbc.is_null() {
             None
         } else {
-            c_str::CString::new(wbc, false).as_str().map(|wbc| wbc.to_string())
+            let slice = unsafe { c_str_to_bytes(&wbc); };
+            str::from_utf8(slice).unwrap()
         }
     }
 }
