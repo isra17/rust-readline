@@ -1,4 +1,5 @@
 #![crate_type = "lib"]
+#![allow(unstable)]
 extern crate libc;
 
 use std::ffi::CString;
@@ -355,7 +356,7 @@ pub fn rl_readline_name() -> Option<String> {
         if name.is_null() {
             None
         } else {
-            let slice = unsafe { c_str_to_bytes(&name) };
+            let slice = c_str_to_bytes(&name);
             Some(str::from_utf8(slice).unwrap().to_string())
         }
     }
@@ -411,7 +412,7 @@ pub fn rl_completer_word_break_characters() -> Option<String> {
         if wbc.is_null() {
             None
         } else {
-            let slice = unsafe { c_str_to_bytes(&wbc) };
+            let slice = c_str_to_bytes(&wbc);
             Some(str::from_utf8(slice).unwrap().to_string())
         }
     }

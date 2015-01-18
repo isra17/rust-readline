@@ -1,3 +1,4 @@
+#![allow(unstable)]
 extern crate "readline" as rl;
 extern crate libc;
 
