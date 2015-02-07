@@ -1,11 +1,18 @@
 #![crate_type = "lib"]
-#![allow(unstable)]
+
+#![feature(collections)]
+#![feature(core)]
+#![feature(io)]
+#![feature(libc)]
+#![feature(path)]
+#![feature(std_misc)]
+
 extern crate libc;
 
 use std::ffi::CString;
 use std::ffi::c_str_to_bytes;
 //use std::io::fs::File;
-use std::io::{IoError, IoResult};
+use std::old_io::{IoError, IoResult};
 use std::mem;
 use std::ptr;
 use std::str;
@@ -444,7 +451,7 @@ pub fn rl_completion_matches(text: *const i8, entry_func: CompletionEntryFunctio
 
 #[cfg(test)]
 mod history_tests {
-    use std::io::TempDir;
+    use std::old_io::TempDir;
     use std::sync::{Once, ONCE_INIT};
     static START: Once = ONCE_INIT;
 

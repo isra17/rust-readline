@@ -1,9 +1,13 @@
-#![allow(unstable)]
+#![feature(libc)]
+#![feature(std_misc)]
+#![feature(core)]
+#![feature(io)]
+
 extern crate "readline" as rl;
 extern crate libc;
 
 use std::ffi::c_str_to_bytes;
-use std::io::stdio::println;
+use std::old_io::stdio::println;
 use std::str;
 
 fn complete(text: String) -> Vec<String> {
