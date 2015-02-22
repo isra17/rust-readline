@@ -3,7 +3,6 @@
 #![feature(collections)]
 #![feature(core)]
 #![feature(libc)]
-#![feature(path)]
 #![feature(std_misc)]
 
 #![feature(old_path)]
@@ -11,8 +10,8 @@
 
 extern crate libc;
 
+use std::ffi::CStr;
 use std::ffi::CString;
-use std::ffi::c_str_to_bytes;
 //use std::io::fs::File;
 use std::old_io::{IoError, IoResult};
 use std::mem;
@@ -165,7 +164,7 @@ pub fn history_get(mut index: i32) -> Option<String> {
     if c_entry.is_null() {
         None
     } else {
-        let slice = unsafe { c_str_to_bytes(&(*c_entry).line) };
+        let slice = unsafe { CStr::from_ptr((*c_entry).line).to_bytes() };
         Some(str::from_utf8(slice).unwrap().to_string())
     }
 }
@@ -309,7 +308,7 @@ pub fn readline(prompt: &str) -> Option<String> {
     if c_line.is_null() {  // user pressed Ctrl-D
         None
     } else {
-        let slice = unsafe { c_str_to_bytes(&c_line) };
+        let slice = unsafe { CStr::from_ptr(c_line).to_bytes() };
         let line = str::from_utf8(slice).unwrap().to_string();
         unsafe { libc::free(c_line as *mut c_void); };
         Some(line)
@@ -345,7 +344,7 @@ pub fn rl_initialize() -> IoResult<()> {
 ///
 /// (See [rl_library_version](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX214))
 pub fn rl_library_version() -> String {
-    let slice = unsafe { c_str_to_bytes(&ffi::rl_library_version) };
+    let slice = unsafe { CStr::from_ptr(ffi::rl_library_version).to_bytes() };
     str::from_utf8(slice).unwrap().to_string()
 }
 
@@ -365,7 +364,7 @@ pub fn rl_readline_name() -> Option<String> {
         if name.is_null() {
             None
         } else {
-            let slice = c_str_to_bytes(&name);
+            let slice = CStr::from_ptr(name).to_bytes();
             Some(str::from_utf8(slice).unwrap().to_string())
         }
     }
@@ -421,7 +420,7 @@ pub fn rl_completer_word_break_characters() -> Option<String> {
         if wbc.is_null() {
             None
         } else {
-            let slice = c_str_to_bytes(&wbc);
+            let slice = CStr::from_ptr(wbc).to_bytes();
             Some(str::from_utf8(slice).unwrap().to_string())
         }
     }
