@@ -2,10 +2,12 @@
 
 #![feature(collections)]
 #![feature(core)]
-#![feature(io)]
 #![feature(libc)]
 #![feature(path)]
 #![feature(std_misc)]
+
+#![feature(old_path)]
+#![feature(old_io)]
 
 extern crate libc;
 
@@ -182,7 +184,7 @@ pub fn read_history(filename: Option<&Path>) -> IoResult<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as usize, true))
+        errno => Err(IoError::from_errno(errno as i32, true))
     }
 }
 
@@ -203,7 +205,7 @@ pub fn write_history(filename: Option<&Path>) -> IoResult<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as usize, true))
+        errno => Err(IoError::from_errno(errno as i32, true))
     }
 }
 
@@ -221,7 +223,7 @@ pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> IoResult<(
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as usize, true))
+        errno => Err(IoError::from_errno(errno as i32, true))
     }
 }
 
@@ -245,7 +247,7 @@ pub fn append_history(nelements: i32, filename: Option<&Path>) -> IoResult<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as usize, true))
+        errno => Err(IoError::from_errno(errno as i32, true))
     }
 }
 
@@ -335,7 +337,7 @@ pub fn rl_initialize() -> IoResult<()> {
     let errno = unsafe { ffi::rl_initialize() };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as usize, true))
+        errno => Err(IoError::from_errno(errno as i32, true))
     }
 }
 
@@ -389,7 +391,7 @@ pub fn rl_read_init_file(filename: &Path) -> IoResult<()> {
     let errno = unsafe { ffi::rl_read_init_file(c_filename.as_ptr()) };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as usize, true))
+        errno => Err(IoError::from_errno(errno as i32, true))
     }
 }
 
@@ -401,7 +403,7 @@ pub fn rl_parse_and_bind(line: &str) -> IoResult<()> {
     let errno = unsafe { ffi::rl_parse_and_bind(c_line.as_ptr()) };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as usize, true))
+        errno => Err(IoError::from_errno(errno as i32, true))
     }
 }
 

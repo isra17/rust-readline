@@ -1,13 +1,14 @@
 #![feature(libc)]
 #![feature(std_misc)]
 #![feature(core)]
-#![feature(io)]
+
+#![feature(old_io)]
 
 extern crate "readline" as rl;
 extern crate libc;
 
-use std::ffi::c_str_to_bytes;
 use std::old_io::stdio::println;
+use std::ffi::CStr;
 use std::str;
 
 fn complete(text: String) -> Vec<String> {
@@ -19,7 +20,7 @@ fn complete(text: String) -> Vec<String> {
 
 extern fn rl_compentry_func(text: *const i8, state: i32) -> *const i8 {
     if state == 0 {
-        let txt = unsafe { c_str_to_bytes(&text) };
+        let txt = unsafe { CStr::from_ptr(text).to_bytes() };
         let entries = complete(str::from_utf8(txt).unwrap().to_string());
         rl::set_compentries(entries);
     }
