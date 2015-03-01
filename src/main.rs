@@ -3,18 +3,27 @@
 #![feature(core)]
 
 #![feature(old_io)]
+#![feature(old_path)]
 
 extern crate "readline" as rl;
 extern crate libc;
 
 use std::old_io::stdio::println;
+use std::old_io::BufferedReader;
+use std::old_io::File;
 use std::ffi::CStr;
 use std::str;
 
 fn complete(text: String) -> Vec<String> {
+    let path = Path::new("/usr/share/dict/words");
+    let mut file = BufferedReader::new(File::open(&path));
     let mut entries: Vec<String> = Vec::new();
-    entries.push(text.clone() + "s");
-    entries.push(text + "zz");
+    for line in file.lines() {
+        let word = line.unwrap();
+        if word.as_slice().starts_with(text.as_slice()) {
+            entries.push(word);
+        }
+    }
     return entries;
 }
 
