@@ -54,7 +54,7 @@ pub fn set_compentries(entries: Vec<String>) {
     clear_compentries();
     let c_entries = alloc_compentries(entries.len());
     for i in range(0, entries.len()) {
-        let c_entry = CString::from_slice(entries[i].as_bytes());
+        let c_entry = CString::new(entries[i].as_bytes()).unwrap();
         unsafe { *c_entries.offset(i as isize) = ffi::strdup(c_entry.as_ptr()); }
     }
 }
@@ -140,7 +140,7 @@ pub fn add_history(line: &str) {
     if history_get(-1).map_or(false, |prev| prev.as_slice() == line) {
         return;
     }
-    let c_line = CString::from_slice(line.as_bytes());
+    let c_line = CString::new(line).unwrap();
     unsafe {
         // HISTCONTROL=ignoredups
         //if PREV_HIST.is_null() || libc::strcmp(PREV_HIST, line) != 0 {
@@ -176,7 +176,7 @@ pub fn history_get(mut index: i32) -> Option<String> {
 pub fn read_history(filename: Option<&Path>) -> IoResult<()> {
     let errno = match filename {
         Some(filename) => {
-            let c_filename = CString::from_slice(filename.as_vec());
+            let c_filename = CString::new(filename.as_vec()).unwrap();
             unsafe { ffi::read_history(c_filename.as_ptr()) }
         },
         None => unsafe { ffi::read_history(ptr::null()) }
@@ -197,7 +197,7 @@ pub fn write_history(filename: Option<&Path>) -> IoResult<()> {
     }
     let errno = match filename {
         Some(filename) => {
-            let c_filename = CString::from_slice(filename.as_vec());
+            let c_filename = CString::new(filename.as_vec()).unwrap();
             unsafe { ffi::write_history(c_filename.as_ptr()) }
         },
         None => unsafe { ffi::write_history(ptr::null()) }
@@ -215,7 +215,7 @@ pub fn write_history(filename: Option<&Path>) -> IoResult<()> {
 pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> IoResult<()> {
     let errno = match filename {
         Some(filename) => {
-            let c_filename = CString::from_slice(filename.as_vec());
+            let c_filename = CString::new(filename.as_vec()).unwrap();
             unsafe { ffi::history_truncate_file(c_filename.as_ptr(), nlines) }
         },
         None => unsafe { ffi::history_truncate_file(ptr::null(), nlines) }
@@ -239,7 +239,7 @@ pub fn append_history(nelements: i32, filename: Option<&Path>) -> IoResult<()> {
             /*if !filename.exists() {
                 File::create(filename);
             }*/
-            let c_filename = CString::from_slice(filename.as_vec());
+            let c_filename = CString::new(filename.as_vec()).unwrap();
             unsafe { ffi::append_history(nelements, c_filename.as_ptr()) }
         },
         None => unsafe { ffi::append_history(nelements, ptr::null()) }
@@ -303,7 +303,7 @@ pub fn history_length() -> i32 {
 /// Otherwise, the line is ended just as if a newline had been typed.
 /// (See [readline](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX190))
 pub fn readline(prompt: &str) -> Option<String> {
-    let c_prompt = CString::from_slice(prompt.as_bytes());
+    let c_prompt = CString::new(prompt).unwrap();
     let c_line = unsafe { ffi::readline(c_prompt.as_ptr()) };
     if c_line.is_null() {  // user pressed Ctrl-D
         None
@@ -378,7 +378,7 @@ pub fn set_rl_readline_name(name: &str) {
     /*unsafe {
         libc::free(ffi::rl_readline_name as *mut c_void);
     }*/
-    let c_name = CString::from_slice(name.as_bytes());
+    let c_name = CString::new(name).unwrap();
     unsafe { ffi::rl_readline_name = ffi::strdup(c_name.as_ptr()) }
 }
 
@@ -386,7 +386,7 @@ pub fn set_rl_readline_name(name: &str) {
 ///
 /// (See [rl_read_init_file](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX267))
 pub fn rl_read_init_file(filename: &Path) -> IoResult<()> {
-    let c_filename = CString::from_slice(filename.as_vec());
+    let c_filename = CString::new(filename.as_vec()).unwrap();
     let errno = unsafe { ffi::rl_read_init_file(c_filename.as_ptr()) };
     match errno {
         0 => Ok(()),
@@ -398,7 +398,7 @@ pub fn rl_read_init_file(filename: &Path) -> IoResult<()> {
 ///
 /// (See [rl_parse_and_bind](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX266))
 pub fn rl_parse_and_bind(line: &str) -> IoResult<()> {
-    let c_line = CString::from_slice(line.as_bytes());
+    let c_line = CString::new(line).unwrap();
     let errno = unsafe { ffi::rl_parse_and_bind(c_line.as_ptr()) };
     match errno {
         0 => Ok(()),
@@ -435,7 +435,7 @@ pub fn set_rl_completer_word_break_characters(wbc: &str) {
     /*unsafe {
         libc::free(ffi::rl_completer_word_break_characters as *mut c_void);
     }*/
-    let c_wbc = CString::from_slice(wbc.as_bytes());
+    let c_wbc = CString::new(wbc).unwrap();
     unsafe { ffi::rl_completer_word_break_characters = ffi::strdup(c_wbc.as_ptr()) };
 }
 
