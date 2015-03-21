@@ -1,22 +1,18 @@
 #![feature(libc)]
-#![feature(std_misc)]
 #![feature(core)]
-
-#![feature(old_io)]
-#![feature(old_path)]
 
 extern crate "readline" as rl;
 extern crate libc;
 
-use std::old_io::stdio::println;
-use std::old_io::BufferedReader;
-use std::old_io::File;
+use std::io::{BufRead,BufReader};
+use std::fs::File;
+use std::path::Path;
 use std::ffi::CStr;
 use std::str;
 
 fn complete(text: String) -> Vec<String> {
     let path = Path::new("/usr/share/dict/words");
-    let mut file = BufferedReader::new(File::open(&path));
+    let file = BufReader::new(File::open(&path).unwrap());
     let mut entries: Vec<String> = Vec::new();
     for line in file.lines() {
         let word = line.unwrap();
@@ -52,11 +48,11 @@ pub fn main() {
             Some(line) => {
                 let l = line.as_slice();
                 rl::add_history(l);
-                println(l);
+                println!("{}", l);
                 //println!("{}", rl::history_get(-2));
             },
             _ => {
-                println("");
+                println!("");
                 break
             }
         }

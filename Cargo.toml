@@ -7,6 +7,9 @@ authors = ["Sean Perry", "Mika Attila"]
 [lib]
 name = "readline"
 
+[dependencies]
+tempdir = "0.3.1"
+
 [[bin]]
 name = "rl-sample"
 test = false

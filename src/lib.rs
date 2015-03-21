@@ -1,19 +1,15 @@
 #![crate_type = "lib"]
 
-#![feature(collections)]
 #![feature(core)]
+#![feature(io)]
 #![feature(libc)]
-#![feature(std_misc)]
-
-#![feature(old_path)]
-#![feature(old_io)]
 
 extern crate libc;
 
 use std::ffi::CStr;
 use std::ffi::CString;
-//use std::io::fs::File;
-use std::old_io::{IoError, IoResult};
+use std::path::Path;
+use std::io::{Error, Result};
 use std::mem;
 use std::ptr;
 use std::str;
@@ -53,7 +49,7 @@ fn alloc_compentries(n: usize) -> *mut *const i8 {
 pub fn set_compentries(entries: Vec<String>) {
     clear_compentries();
     let c_entries = alloc_compentries(entries.len());
-    for i in range(0, entries.len()) {
+    for i in 0..entries.len() {
         let c_entry = CString::new(entries[i].as_bytes()).unwrap();
         unsafe { *c_entries.offset(i as isize) = ffi::strdup(c_entry.as_ptr()); }
     }
@@ -173,17 +169,17 @@ pub fn history_get(mut index: i32) -> Option<String> {
 ///
 /// If `filename` is `None`, then read from '~/.history'.
 /// (See [read_history](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX27))
-pub fn read_history(filename: Option<&Path>) -> IoResult<()> {
+pub fn read_history(filename: Option<&Path>) -> Result<()> {
     let errno = match filename {
         Some(filename) => {
-            let c_filename = CString::new(filename.as_vec()).unwrap();
+            let c_filename = CString::new(filename.to_str().unwrap()).unwrap();
             unsafe { ffi::read_history(c_filename.as_ptr()) }
         },
         None => unsafe { ffi::read_history(ptr::null()) }
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as i32, true))
+        errno => Err(Error::from_os_error(errno as i32))
     }
 }
 
@@ -191,20 +187,20 @@ pub fn read_history(filename: Option<&Path>) -> IoResult<()> {
 ///
 /// If `filename` is `None`, then write the history list to `~/.history'.
 /// (See [write_history](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX29))
-pub fn write_history(filename: Option<&Path>) -> IoResult<()> {
+pub fn write_history(filename: Option<&Path>) -> Result<()> {
     if history_length() == 0 {
         return Ok(());
     }
     let errno = match filename {
         Some(filename) => {
-            let c_filename = CString::new(filename.as_vec()).unwrap();
+            let c_filename = CString::new(filename.to_str().unwrap()).unwrap();
             unsafe { ffi::write_history(c_filename.as_ptr()) }
         },
         None => unsafe { ffi::write_history(ptr::null()) }
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as i32, true))
+        errno => Err(Error::from_os_error(errno as i32))
     }
 }
 
@@ -212,17 +208,17 @@ pub fn write_history(filename: Option<&Path>) -> IoResult<()> {
 ///
 /// If `filename` is `None`, then `~/.history' is truncated.
 /// (See [history_truncate_file](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX31))
-pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> IoResult<()> {
+pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> Result<()> {
     let errno = match filename {
         Some(filename) => {
-            let c_filename = CString::new(filename.as_vec()).unwrap();
+            let c_filename = CString::new(filename.to_str().unwrap()).unwrap();
             unsafe { ffi::history_truncate_file(c_filename.as_ptr(), nlines) }
         },
         None => unsafe { ffi::history_truncate_file(ptr::null(), nlines) }
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as i32, true))
+        errno => Err(Error::from_os_error(errno as i32))
     }
 }
 
@@ -230,7 +226,7 @@ pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> IoResult<(
 ///
 /// If `filename` is `None`, then `~/.history' is truncated.
 /// (See [append_history](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX30))
-pub fn append_history(nelements: i32, filename: Option<&Path>) -> IoResult<()> {
+pub fn append_history(nelements: i32, filename: Option<&Path>) -> Result<()> {
     if history_length() == 0 {
         return Ok(());
     }
@@ -239,14 +235,14 @@ pub fn append_history(nelements: i32, filename: Option<&Path>) -> IoResult<()> {
             /*if !filename.exists() {
                 File::create(filename);
             }*/
-            let c_filename = CString::new(filename.as_vec()).unwrap();
+            let c_filename = CString::new(filename.to_str().unwrap()).unwrap();
             unsafe { ffi::append_history(nelements, c_filename.as_ptr()) }
         },
         None => unsafe { ffi::append_history(nelements, ptr::null()) }
     };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as i32, true))
+        errno => Err(Error::from_os_error(errno as i32))
     }
 }
 
@@ -332,11 +328,11 @@ pub fn rl_point() -> i32 {
 /// Initialize or re-initialize Readline's internal state. It's not strictly necessary to call this; `readline()` calls it before reading any input.
 ///
 /// (See [rl_initialize](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX316))
-pub fn rl_initialize() -> IoResult<()> {
+pub fn rl_initialize() -> Result<()> {
     let errno = unsafe { ffi::rl_initialize() };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as i32, true))
+        errno => Err(Error::from_os_error(errno as i32))
     }
 }
 
@@ -385,24 +381,24 @@ pub fn set_rl_readline_name(name: &str) {
 /// Read keybindings and variable assignments from `filename`.
 ///
 /// (See [rl_read_init_file](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX267))
-pub fn rl_read_init_file(filename: &Path) -> IoResult<()> {
-    let c_filename = CString::new(filename.as_vec()).unwrap();
+pub fn rl_read_init_file(filename: &Path) -> Result<()> {
+    let c_filename = CString::new(filename.to_str().unwrap()).unwrap();
     let errno = unsafe { ffi::rl_read_init_file(c_filename.as_ptr()) };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as i32, true))
+        errno => Err(Error::from_os_error(errno as i32))
     }
 }
 
 /// Parse line as if it had been read from the inputrc file and performs any key bindings and variable assignments found
 ///
 /// (See [rl_parse_and_bind](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX266))
-pub fn rl_parse_and_bind(line: &str) -> IoResult<()> {
+pub fn rl_parse_and_bind(line: &str) -> Result<()> {
     let c_line = CString::new(line).unwrap();
     let errno = unsafe { ffi::rl_parse_and_bind(c_line.as_ptr()) };
     match errno {
         0 => Ok(()),
-        errno => Err(IoError::from_errno(errno as i32, true))
+        errno => Err(Error::from_os_error(errno as i32))
     }
 }
 
@@ -452,16 +448,13 @@ pub fn rl_completion_matches(text: *const i8, entry_func: CompletionEntryFunctio
 
 #[cfg(test)]
 mod history_tests {
-    use std::old_io::TempDir;
-    use std::sync::{Once, ONCE_INIT};
-    static START: Once = ONCE_INIT;
+    extern crate tempdir;
+
+    use std::path::Path;
 
     #[test]
     fn clear() {
-        START.call_once(|| {
-            super::rl_initialize().unwrap();
-            super::using_history();
-        });
+        super::rl_initialize().unwrap();
         super::clear_history();
         super::add_history("entry1");
         super::clear_history();
@@ -470,10 +463,7 @@ mod history_tests {
 
     #[test]
     fn add_history() {
-        START.call_once(|| {
-            super::rl_initialize().unwrap();
-            super::using_history();
-        });
+        super::rl_initialize().unwrap();
         super::clear_history();
 
         assert_eq!(super::history_length(), 0);
@@ -497,10 +487,7 @@ mod history_tests {
 
     #[test]
     fn stifle_history() {
-        START.call_once(|| {
-            super::rl_initialize().unwrap();
-            super::using_history();
-        });
+        super::rl_initialize().unwrap();
         super::clear_history();
         super::add_history("entry1");
         super::add_history("entry2");
@@ -521,12 +508,9 @@ mod history_tests {
 
     #[test]
     fn read_history() {
-        START.call_once(|| {
-            super::rl_initialize().unwrap();
-            super::using_history();
-        });
+        super::rl_initialize().unwrap();
         super::clear_history();
-        let td = TempDir::new_in(&Path::new("."), "histo").unwrap();
+        let td = tempdir::TempDir::new_in(&Path::new("."), "histo").unwrap();
         let history = td.path().join(".history");
 
         super::add_history("entry1");
@@ -545,10 +529,7 @@ mod history_tests {
 
     #[test]
     fn history_base() {
-        START.call_once(|| {
-            super::rl_initialize().unwrap();
-            super::using_history();
-        });
+        super::rl_initialize().unwrap();
         super::clear_history();
         assert_eq!(super::history_base(), 1);
     }
@@ -556,14 +537,8 @@ mod history_tests {
 
 #[cfg(test)]
 mod rl_tests {
-    use std::sync::{Once, ONCE_INIT};
-    static START: Once = ONCE_INIT;
-
     #[test]
     fn rl_parse_and_bind() {
-        START.call_once(|| {
-            super::rl_initialize().unwrap();
-        });
         super::rl_parse_and_bind("bind \\t rl_complete").unwrap();
     }
 
