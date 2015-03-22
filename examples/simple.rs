@@ -36,6 +36,7 @@ extern fn my_attempted_completion_function(text: *const i8, _start: i32, _end: i
     return rl::rl_completion_matches(text, rl_compentry_func)
 }
 
+// cargo run --example simple
 pub fn main() {
     rl::rl_initialize().unwrap();
     //println!("{}", rl::rl_readline_version())
