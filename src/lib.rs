@@ -1,6 +1,5 @@
 #![crate_type = "lib"]
 
-#![feature(core)]
 #![feature(io)]
 #![feature(libc)]
 
@@ -129,11 +128,11 @@ pub fn using_history() {
 /// Blank lines and consecutive duplicates are discarded.
 /// (See [add_history](http://cnswww.cns.cwru.edu/php/chet/readline/history.html#IDX5))
 pub fn add_history(line: &str) {
-    if line.len() == 0 || line.char_at(0).is_whitespace() { // HISTCONTROL=ignorespace
+    if line.len() == 0 || line.chars().next().map_or(true, |c| c.is_whitespace()) { // HISTCONTROL=ignorespace
         return;
     }
     // HISTCONTROL=ignoredups
-    if history_get(-1).map_or(false, |prev| prev.as_slice() == line) {
+    if history_get(-1).map_or(false, |prev| prev == line) {
         return;
     }
     let c_line = CString::new(line).unwrap();
@@ -179,7 +178,7 @@ pub fn read_history(filename: Option<&Path>) -> Result<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno as i32))
+        errno => Err(Error::from_os_error(errno))
     }
 }
 
@@ -200,7 +199,7 @@ pub fn write_history(filename: Option<&Path>) -> Result<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno as i32))
+        errno => Err(Error::from_os_error(errno))
     }
 }
 
@@ -218,7 +217,7 @@ pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> Result<()>
     };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno as i32))
+        errno => Err(Error::from_os_error(errno))
     }
 }
 
@@ -242,7 +241,7 @@ pub fn append_history(nelements: i32, filename: Option<&Path>) -> Result<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno as i32))
+        errno => Err(Error::from_os_error(errno))
     }
 }
 
@@ -332,7 +331,7 @@ pub fn rl_initialize() -> Result<()> {
     let errno = unsafe { ffi::rl_initialize() };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno as i32))
+        errno => Err(Error::from_os_error(errno))
     }
 }
 
@@ -386,7 +385,7 @@ pub fn rl_read_init_file(filename: &Path) -> Result<()> {
     let errno = unsafe { ffi::rl_read_init_file(c_filename.as_ptr()) };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno as i32))
+        errno => Err(Error::from_os_error(errno))
     }
 }
 
@@ -398,7 +397,7 @@ pub fn rl_parse_and_bind(line: &str) -> Result<()> {
     let errno = unsafe { ffi::rl_parse_and_bind(c_line.as_ptr()) };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno as i32))
+        errno => Err(Error::from_os_error(errno))
     }
 }
 

@@ -8,4 +8,4 @@ authors = ["Sean Perry", "Mika Attila"]
 name = "readline"
 
 [dev-dependencies]
-tempdir = "0.3.1"
+tempdir = "0.3.3"

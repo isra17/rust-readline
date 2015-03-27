@@ -1,7 +1,8 @@
 #![feature(libc)]
 #![feature(core)]
+#![feature(convert)]
 
-extern crate "readline" as rl;
+extern crate readline as rl;
 extern crate libc;
 
 use std::io::{BufRead,BufReader};
@@ -42,12 +43,12 @@ pub fn main() {
     //println!("{}", rl::rl_readline_version())
     println!("{}", rl::rl_library_version());
 
-    rl::set_rl_attempted_completion_function(Some(my_attempted_completion_function as rl::CompletionFunction));
+    rl::set_rl_attempted_completion_function(Some(my_attempted_completion_function));
 
     loop {
         match rl::readline("> ") {
             Some(line) => {
-                let l = line.as_slice();
+                let l = line.as_ref();
                 rl::add_history(l);
                 println!("{}", l);
                 //println!("{}", rl::history_get(-2));
