@@ -159,8 +159,8 @@ pub fn history_get(mut index: i32) -> Option<String> {
     if c_entry.is_null() {
         None
     } else {
-        let slice = unsafe { CStr::from_ptr((*c_entry).line).to_bytes() };
-        Some(str::from_utf8(slice).unwrap().to_string())
+        let c_line = unsafe { (*c_entry).line };
+        c_str_to_string(c_line)
     }
 }
 
@@ -303,10 +303,9 @@ pub fn readline(prompt: &str) -> Option<String> {
     if c_line.is_null() {  // user pressed Ctrl-D
         None
     } else {
-        let slice = unsafe { CStr::from_ptr(c_line).to_bytes() };
-        let line = str::from_utf8(slice).unwrap().to_string();
+        let line = c_str_to_string(c_line);
         unsafe { libc::free(c_line as *mut c_void); };
-        Some(line)
+        line
     }
 }
 
@@ -354,15 +353,8 @@ pub fn rl_readline_version() -> i32 {
 ///
 /// (See [rl_readline_name](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX218))
 pub fn rl_readline_name() -> Option<String> {
-    unsafe {
-        let name = ffi::rl_readline_name;
-        if name.is_null() {
-            None
-        } else {
-            let slice = CStr::from_ptr(name).to_bytes();
-            Some(str::from_utf8(slice).unwrap().to_string())
-        }
-    }
+    let name = unsafe { ffi::rl_readline_name };
+    c_str_to_string(name)
 }
 
 /// Set to a unique name by each application using Readline. The value allows conditional parsing of the inputrc file.
@@ -410,15 +402,8 @@ pub fn rl_attempted_completion_over(b: bool) {
 ///
 /// (See [rl_completer_word_break_characters](http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#IDX354))
 pub fn rl_completer_word_break_characters() -> Option<String> {
-    unsafe {
-        let wbc = ffi::rl_completer_word_break_characters;
-        if wbc.is_null() {
-            None
-        } else {
-            let slice = CStr::from_ptr(wbc).to_bytes();
-            Some(str::from_utf8(slice).unwrap().to_string())
-        }
-    }
+    let wbc = unsafe { ffi::rl_completer_word_break_characters };
+    c_str_to_string(wbc)
 }
 
 /// Set the list of characters that signal a break between words for completion.
@@ -442,6 +427,15 @@ pub fn set_rl_attempted_completion_function(f: CPPFunction) {
 pub fn rl_completion_matches(text: *const i8, entry_func: CompletionEntryFunction) -> *mut *const i8 {
     unsafe {
         ffi::rl_completion_matches(text, entry_func)
+    }
+}
+
+fn c_str_to_string(c_str: *const i8) -> Option<String> {
+    if c_str.is_null() {
+        None
+    } else {
+        let c_slice = unsafe { CStr::from_ptr(c_str).to_bytes() };
+        Some(str::from_utf8(c_slice).unwrap().to_string())
     }
 }
 

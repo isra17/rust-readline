@@ -1,6 +1,5 @@
 #![feature(libc)]
 #![feature(core)]
-#![feature(convert)]
 
 extern crate readline as rl;
 extern crate libc;
