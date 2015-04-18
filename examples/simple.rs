@@ -16,7 +16,7 @@ fn complete(text: String) -> Vec<String> {
     let mut entries: Vec<String> = Vec::new();
     for line in file.lines() {
         let word = line.unwrap();
-        if word.as_slice().starts_with(text.as_slice()) {
+        if (&word).starts_with(&text) {
             entries.push(word);
         }
     }

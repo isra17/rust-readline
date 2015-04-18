@@ -1,6 +1,5 @@
 #![crate_type = "lib"]
 
-#![feature(io)]
 #![feature(libc)]
 
 extern crate libc;
@@ -178,7 +177,7 @@ pub fn read_history(filename: Option<&Path>) -> Result<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno))
+        errno => Err(Error::from_raw_os_error(errno))
     }
 }
 
@@ -199,7 +198,7 @@ pub fn write_history(filename: Option<&Path>) -> Result<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno))
+        errno => Err(Error::from_raw_os_error(errno))
     }
 }
 
@@ -217,7 +216,7 @@ pub fn history_truncate_file(filename: Option<&Path>, nlines: i32) -> Result<()>
     };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno))
+        errno => Err(Error::from_raw_os_error(errno))
     }
 }
 
@@ -241,7 +240,7 @@ pub fn append_history(nelements: i32, filename: Option<&Path>) -> Result<()> {
     };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno))
+        errno => Err(Error::from_raw_os_error(errno))
     }
 }
 
@@ -330,7 +329,7 @@ pub fn rl_initialize() -> Result<()> {
     let errno = unsafe { ffi::rl_initialize() };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno))
+        errno => Err(Error::from_raw_os_error(errno))
     }
 }
 
@@ -377,7 +376,7 @@ pub fn rl_read_init_file(filename: &Path) -> Result<()> {
     let errno = unsafe { ffi::rl_read_init_file(c_filename.as_ptr()) };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno))
+        errno => Err(Error::from_raw_os_error(errno))
     }
 }
 
@@ -389,7 +388,7 @@ pub fn rl_parse_and_bind(line: &str) -> Result<()> {
     let errno = unsafe { ffi::rl_parse_and_bind(c_line.as_ptr()) };
     match errno {
         0 => Ok(()),
-        errno => Err(Error::from_os_error(errno))
+        errno => Err(Error::from_raw_os_error(errno))
     }
 }
 
