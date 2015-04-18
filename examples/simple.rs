@@ -1,5 +1,4 @@
 #![feature(libc)]
-#![feature(core)]
 
 extern crate readline as rl;
 extern crate libc;
