@@ -423,14 +423,14 @@ pub fn set_rl_completer_word_break_characters(wbc: &str) {
     unsafe { ffi::rl_completer_word_break_characters = ffi::strdup(c_wbc.as_ptr()) };
 }
 
-
 pub fn set_rl_attempted_completion_function(f: CPPFunction) {
     unsafe { ffi::rl_attempted_completion_function = f }
 }
 
-pub fn rl_callback_handler_install(prompt: *const i8, handler: VCPFunction) {
+pub fn rl_callback_handler_install(prompt: &str, handler: VCPFunction) {
+    let c_prompt = CString::new(prompt).unwrap();
     unsafe {
-        ffi::rl_callback_handler_install(prompt, handler)
+        ffi::rl_callback_handler_install(c_prompt.as_ptr(), handler)
     }
 }
 
