@@ -17,6 +17,8 @@ pub type CompletionFunction = extern "C" fn(text: *const i8, start: i32, end: i3
 pub type CPPFunction = Option<CompletionFunction>;
 // rl_compentry_func_t
 pub type CompletionEntryFunction = extern "C" fn(text: *const i8, state: i32) -> *const i8;
+pub type CompleteLineFunction = extern "C" fn(text: *mut i8);
+pub type VCPFunction = Option<CompleteLineFunction>;
 
 static mut ENTRIES: *mut *const i8 = 0 as *mut *const i8;
 static mut NB_ENTRIES: usize = 0;
@@ -105,6 +107,9 @@ mod ffi {
         pub fn rl_initialize() -> c_int;
         pub fn rl_read_init_file(filename: *const c_char) -> c_int;
         pub fn rl_parse_and_bind(line: *const c_char) -> c_int;
+        pub fn rl_callback_handler_install(prompt: *const c_char, handler: super::VCPFunction);
+        pub fn rl_callback_read_char();
+        pub fn rl_callback_handler_remove();
 
         pub fn rl_completion_matches(text: *const c_char, entry_func: super::CompletionEntryFunction) -> *mut *const c_char;
     }
@@ -421,6 +426,24 @@ pub fn set_rl_completer_word_break_characters(wbc: &str) {
 
 pub fn set_rl_attempted_completion_function(f: CPPFunction) {
     unsafe { ffi::rl_attempted_completion_function = f }
+}
+
+pub fn rl_callback_handler_install(prompt: *const i8, handler: VCPFunction) {
+    unsafe {
+        ffi::rl_callback_handler_install(prompt, handler)
+    }
+}
+
+pub fn rl_callback_read_char() {
+    unsafe {
+        ffi::rl_callback_read_char();
+    }
+}
+
+pub fn rl_callback_handler_remove() {
+    unsafe {
+        ffi::rl_callback_handler_remove();
+    }
 }
 
 pub fn rl_completion_matches(text: *const i8, entry_func: CompletionEntryFunction) -> *mut *const i8 {
